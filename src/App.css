@@ -36,3 +36,7 @@
     transform: rotate(360deg);
   }
 }
+
+h1, p {
+  font-family: Lato;
+}
