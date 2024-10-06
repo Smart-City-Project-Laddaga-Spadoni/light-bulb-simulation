@@ -25,7 +25,7 @@ const Bulb = ({ name }: { name: string }) => {
   };
 
   return (
-    <Card>
+    <Card className="dark:bg-gray-800 rounded-lg border border-amber-50">
       <CardHeader className="items-center">
         <CardTitle>{name}</CardTitle>
       </CardHeader>
