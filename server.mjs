@@ -26,7 +26,9 @@ app.prepare().then(() => {
     });
 
     socket.on("bulb:brightness", ({ bulbName, newBrightness }) => {
-      console.log(`The ${bulbName} has changed the brightness to value ${newBrightness}`);
+      console.log(
+        `The ${bulbName} has changed the brightness to value ${newBrightness}`,
+      );
       // publish with mqtt
     });
   });

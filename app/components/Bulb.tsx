@@ -19,13 +19,6 @@ enum BulbStates {
   ON,
 }
 
-const publishNewState = (
-  event: string,
-  data: { name: string; newState: number },
-) => {
-  if (socket.connected) socket.emit(event, data);
-};
-
 const Bulb = ({ name }: { name: string }) => {
   const [bulbState, setBulbState] = useState(BulbStates.OFF);
   const [brightness, setBrightness] = useState([50]);
