@@ -12,7 +12,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Label } from "@/components/ui/label";
-import { socket } from "@/lib/socket";
+import { clientsideSocket } from "@/lib/clientside-socket";
 
 enum BulbStates {
   OFF,
@@ -27,14 +27,14 @@ const Bulb = ({ name }: { name: string }) => {
     const newState =
       bulbState === BulbStates.ON ? BulbStates.OFF : BulbStates.ON;
     setBulbState(newState);
-    if (socket.connected)
-      socket.emit("bulb:state", { bulbName: name, newState });
+    if (clientsideSocket.connected)
+      clientsideSocket.emit("bulb:state", { bulbName: name, newState });
   };
 
   const handleBrightness = (brightness: number[]) => {
     setBrightness(brightness);
-    if (socket.connected)
-      socket.emit("bulb:brightness", {
+    if (clientsideSocket.connected)
+      clientsideSocket.emit("bulb:brightness", {
         bulbName: name,
         newBrightness: brightness[0],
       });
