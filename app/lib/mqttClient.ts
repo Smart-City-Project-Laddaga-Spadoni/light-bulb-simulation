@@ -1,5 +1,5 @@
 import mqtt, { MqttClient } from "mqtt";
-import { getSocketIOServerInstance } from "@/lib/serverside-socket";
+import { sio } from "@/lib/serverside-socket";
 
 let client: MqttClient | null = null;
 
@@ -18,10 +18,6 @@ export const getMqttClient = async () => {
       client?.subscribe("device/+", (err) => {
         if (err) {
           console.error("Error subscribing to topic:", err);
-        } else {
-          const io = getSocketIOServerInstance();
-          if (io)
-            io.emit("mqtt:connected", { message: "Connected to MQTT broker" });
         }
       });
     });
@@ -32,13 +28,14 @@ export const getMqttClient = async () => {
       client = null;
     });
 
-    client.on("message", (topic, message) => {
+    // messages sent from the MQTT broker to the next.js server
+    client.on("message", (topic, newState) => {
       console.log(
-        `Received message from topic: ${topic}, message: ${message.toString()}`,
+        `Received message from topic: ${topic}, message: ${newState.toString()}`,
       );
-      if (topic.startsWith("device/")) {
-        // handle bulb state change
-      }
+      const device_id = topic.split("/")[1];
+      // forward the message to the Bulb component associated with the device_id
+      sio.to(device_id).emit("updateState", newState);
     });
   }
   return client;

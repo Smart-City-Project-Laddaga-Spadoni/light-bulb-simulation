@@ -1,37 +1,69 @@
-import { DefaultEventsMap, Server, ServerOptions } from "socket.io";
+import { createServer } from "http";
+import { Server } from "socket.io";
+import { getMqttClient } from "@/lib/mqttClient";
 
-let io: Server<DefaultEventsMap, DefaultEventsMap>;
+type MessageData = {
+  is_on: boolean;
+  brightness: number;
+};
 
-export const initSocketIOServer = (server: Partial<ServerOptions>) => {
-  if (!io) {
-    io = new Server(server);
+type DeviceData = {
+  device_id: string;
+  status: MessageData;
+};
 
-    io.on("connection", (socket) => {
-      console.log("A user connected");
+const httpServer = createServer();
+export const sio = new Server(httpServer, {
+  cors: {
+    origin: "http://localhost:3000",
+    methods: ["GET", "POST"],
+  },
+});
 
-      socket.on("disconnect", () => {
-        console.log("A user disconnected");
-      });
+sio.on("connection", (socket) => {
+  socket.on("disconnect", () => {
+    console.log("A user disconnected");
+  });
 
-      socket.on("bulb:state", ({ bulbName, newState }) => {
-        console.log(`The ${bulbName} is now ${newState === 1 ? "on" : "off"}`);
-        // publish with mqtt
-      });
+  socket.on("join", async (device_id) => {
+    console.log(`User with id ${socket.id} joined room ${device_id}`);
+    socket.join(device_id);
+    // sign the bulb in to the python iot server
+    const client = await getMqttClient();
+    if (client) {
+      if (client.connected) {
+        client.publish(`signin`, JSON.stringify({ device_id }));
+        console.log(`Published signin message for ${device_id}`);
+      } else {
+        console.error("MQTT client is not connected");
+      }
+    } else {
+      console.error("MQTT client could not be retrieved");
+    }
+  });
 
-      socket.on("bulb:brightness", ({ bulbName, newBrightness }) => {
-        console.log(
-          `The ${bulbName} has changed the brightness to value ${newBrightness}`,
+  // messages sent from Bulb components to the next.js server
+  socket.on("stateChanged", async ({ device_id, status }: DeviceData) => {
+    console.log(
+      `${device_id} changed the bulb state to\n${JSON.stringify({ device_id, status })}`,
+    );
+
+    // forward the message to the MQTT broker
+    const client = await getMqttClient();
+    if (client) {
+      if (client.connected) {
+        client.publish(
+          `device/${device_id}`,
+          JSON.stringify({ device_id, status })
         );
-        // publish with mqtt
-      });
-    });
-  }
-  return io;
-};
+        console.log(`Published state change to device/${device_id}`);
+      } else {
+        console.error("MQTT client is not connected");
+      }
+    } else {
+      console.error("MQTT client could not be retrieved");
+    }
+  });
+});
 
-export const getSocketIOServerInstance = () => {
-  if (!io) {
-    throw new Error("Socket.io not initialized");
-  }
-  return io;
-};
+httpServer.listen(process.env.SOCKET_IO_SERVER_PORT);

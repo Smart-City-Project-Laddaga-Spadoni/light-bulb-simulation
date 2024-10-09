@@ -8,37 +8,69 @@ import {
 } from "@/components/ui/card";
 import Image from "next/image";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Label } from "@/components/ui/label";
-import { clientsideSocket } from "@/lib/clientside-socket";
+import { io, Socket } from "socket.io-client";
 
 enum BulbStates {
   OFF,
   ON,
 }
 
+type MessageData = {
+  is_on: boolean;
+  brightness: number;
+}
+
 const Bulb = ({ name }: { name: string }) => {
+  const device_id = "bulb" + name.split(" ")[1];
   const [bulbState, setBulbState] = useState(BulbStates.OFF);
   const [brightness, setBrightness] = useState([50]);
+  const [socket, setSocket] = useState<Socket | null>(null);
 
   const handleToggle = () => {
     const newState =
       bulbState === BulbStates.ON ? BulbStates.OFF : BulbStates.ON;
     setBulbState(newState);
-    if (clientsideSocket.connected)
-      clientsideSocket.emit("bulb:state", { bulbName: name, newState });
+    handleStateChange({ is_on: !!newState, brightness: brightness[0] });
   };
 
   const handleBrightness = (brightness: number[]) => {
     setBrightness(brightness);
-    if (clientsideSocket.connected)
-      clientsideSocket.emit("bulb:brightness", {
-        bulbName: name,
-        newBrightness: brightness[0],
-      });
+    handleStateChange({ is_on: !!bulbState, brightness: brightness[0] });
   };
+
+  const handleStateChange = ({
+    is_on,
+    brightness,
+  }: MessageData) => {
+    if (socket) {
+      socket.emit("stateChanged", {
+        device_id,
+        status: { is_on, brightness },
+      });
+    }
+  };
+
+  // at component mount, connect to the socket.io server and join the bulb room
+  useEffect(() => {
+    const sock = io("http://localhost:32623");
+    setSocket(sock);
+
+    sock.emit("join", name);
+
+    // listen for state updates from the server (forwarded from the MQTT broker)
+    sock.on("updateState", (data: MessageData) => {
+      setBulbState(data.is_on ? BulbStates.ON : BulbStates.OFF);
+      setBrightness([data.brightness]);
+    });
+
+    return () => {
+      sock.disconnect();
+    };
+  }, [name]);
 
   return (
     <Card className="dark:bg-gray-800 rounded-lg border border-amber-50">
