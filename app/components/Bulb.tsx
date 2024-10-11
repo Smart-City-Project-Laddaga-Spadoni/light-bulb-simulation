@@ -47,7 +47,7 @@ const Bulb = ({ name }: { name: string }) => {
     brightness,
   }: MessageData) => {
     if (socket) {
-      socket.emit("stateChanged", {
+      socket.emit("publishState", {
         device_id,
         status: { is_on, brightness },
       });
@@ -59,10 +59,10 @@ const Bulb = ({ name }: { name: string }) => {
     const sock = io("http://localhost:32623");
     setSocket(sock);
 
-    sock.emit("join", name);
+    sock.emit("join", device_id);
 
     // listen for state updates from the server (forwarded from the MQTT broker)
-    sock.on("updateState", (data: MessageData) => {
+    sock.on("syncState", (data) => {
       setBulbState(data.is_on ? BulbStates.ON : BulbStates.OFF);
       setBrightness([data.brightness]);
     });
@@ -70,7 +70,7 @@ const Bulb = ({ name }: { name: string }) => {
     return () => {
       sock.disconnect();
     };
-  }, [name]);
+  }, [device_id]);
 
   return (
     <Card className="dark:bg-gray-800 rounded-lg border border-amber-50">
@@ -80,8 +80,8 @@ const Bulb = ({ name }: { name: string }) => {
       <CardContent className="flex items-center justify-center">
         <Image
           src={`/images/light-bulb-${BulbStates[bulbState]}.jpg`}
-          width={200}
           height={200}
+          width={150}
           alt="A turned off bulb"
         />
       </CardContent>

@@ -14,7 +14,7 @@ import { useRouter } from "next/navigation";
 
 const BulbsChooser = () => {
   const router = useRouter();
-  const [numBulbs, setNumBulbs] = useState(0);
+  const [numBulbs, setNumBulbs] = useState(5);
 
   return (
     <div className="flex flex-col items-center justify-center">
@@ -28,14 +28,16 @@ const BulbsChooser = () => {
           <Label className="dark:text-gray-300 mb-2">
             How many bulbs do you want to simulate?:
           </Label>
+          <div className="flex justify-center items-center">
           <Input
             type="number"
             value={numBulbs}
             onChange={(e) => setNumBulbs(Number(e.target.value))}
-            className="mb-4"
-            min={1}
+            className="m-4 text-3xl w-1/4"
+            min={0}
             placeholder="Number of bulbs"
           />
+          </div>
         </CardContent>
         <CardFooter>
           <Button

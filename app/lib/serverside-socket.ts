@@ -32,7 +32,7 @@ sio.on("connection", (socket) => {
     const client = await getMqttClient();
     if (client) {
       if (client.connected) {
-        client.publish(`signin`, JSON.stringify({ device_id }));
+        client.publish(`device/signin`, JSON.stringify({ device_id }));
         console.log(`Published signin message for ${device_id}`);
       } else {
         console.error("MQTT client is not connected");
@@ -43,7 +43,7 @@ sio.on("connection", (socket) => {
   });
 
   // messages sent from Bulb components to the next.js server
-  socket.on("stateChanged", async ({ device_id, status }: DeviceData) => {
+  socket.on("publishState", async ({ device_id, status }: DeviceData) => {
     console.log(
       `${device_id} changed the bulb state to\n${JSON.stringify({ device_id, status })}`,
     );
@@ -54,7 +54,7 @@ sio.on("connection", (socket) => {
       if (client.connected) {
         client.publish(
           `device/${device_id}`,
-          JSON.stringify({ device_id, status })
+          JSON.stringify(status)
         );
         console.log(`Published state change to device/${device_id}`);
       } else {

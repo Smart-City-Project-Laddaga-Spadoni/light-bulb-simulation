@@ -6,6 +6,7 @@ let client: MqttClient | null = null;
 export const getMqttClient = async () => {
   if (!client) {
     try {
+      console.log("Connecting to MQTT broker...");
       client = await mqtt.connectAsync(process.env.MQTT_BROKER_URL!);
     } catch (error) {
       console.error("MQTT connection error:", error);
@@ -13,13 +14,15 @@ export const getMqttClient = async () => {
       return undefined;
     }
 
+    client.subscribe("device/+", (err) => {
+      if (err) {
+        console.error("Error subscribing to topic:", err);
+      }
+      console.log("Subscribed to devices");
+    });
+
     client.on("connect", () => {
       console.log("Connected to MQTT broker");
-      client?.subscribe("device/+", (err) => {
-        if (err) {
-          console.error("Error subscribing to topic:", err);
-        }
-      });
     });
 
     client.on("error", (error) => {
@@ -33,9 +36,10 @@ export const getMqttClient = async () => {
       console.log(
         `Received message from topic: ${topic}, message: ${newState.toString()}`,
       );
+      const newS = JSON.parse(newState.toString());
       const device_id = topic.split("/")[1];
       // forward the message to the Bulb component associated with the device_id
-      sio.to(device_id).emit("updateState", newState);
+      sio.to(device_id).emit("syncState", newS);
     });
   }
   return client;
