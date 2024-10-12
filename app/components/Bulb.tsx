@@ -2,6 +2,7 @@
 import {
   Card,
   CardContent,
+  CardDescription,
   CardFooter,
   CardHeader,
   CardTitle,
@@ -13,6 +14,8 @@ import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Label } from "@/components/ui/label";
 import { io, Socket } from "socket.io-client";
+import { CardContentSkeleton } from "@/components/CardContentSkeleton";
+import { CardFooterSkeleton } from "@/components/CardFooterSkeleton";
 
 enum BulbStates {
   OFF,
@@ -22,13 +25,14 @@ enum BulbStates {
 type MessageData = {
   is_on: boolean;
   brightness: number;
-}
+};
 
 const Bulb = ({ name }: { name: string }) => {
   const device_id = "bulb" + name.split(" ")[1];
   const [bulbState, setBulbState] = useState(BulbStates.OFF);
   const [brightness, setBrightness] = useState([50]);
   const [socket, setSocket] = useState<Socket | null>(null);
+  const [isSyncing, setIsSyncing] = useState(true);
 
   const handleToggle = () => {
     const newState =
@@ -42,10 +46,7 @@ const Bulb = ({ name }: { name: string }) => {
     handleStateChange({ is_on: !!bulbState, brightness: brightness[0] });
   };
 
-  const handleStateChange = ({
-    is_on,
-    brightness,
-  }: MessageData) => {
+  const handleStateChange = ({ is_on, brightness }: MessageData) => {
     if (socket) {
       socket.emit("publishState", {
         device_id,
@@ -65,6 +66,7 @@ const Bulb = ({ name }: { name: string }) => {
     sock.on("syncState", (data) => {
       setBulbState(data.is_on ? BulbStates.ON : BulbStates.OFF);
       setBrightness([data.brightness]);
+      setIsSyncing(false);
     });
 
     return () => {
@@ -73,35 +75,49 @@ const Bulb = ({ name }: { name: string }) => {
   }, [device_id]);
 
   return (
-    <Card className="dark:bg-gray-800 rounded-lg border border-amber-50">
+    <Card className="w-64 h-full dark:bg-gray-800 rounded-lg border border-amber-50">
       <CardHeader className="items-center">
-        <CardTitle>{name}</CardTitle>
+        <CardTitle>{"💡" + name}</CardTitle>
+        <CardDescription>
+          {isSyncing
+            ? "Syncing state with the IoT server..."
+            : "✅ State synced!"}
+        </CardDescription>
       </CardHeader>
-      <CardContent className="flex items-center justify-center">
-        <Image
-          src={`/images/light-bulb-${BulbStates[bulbState]}.jpg`}
-          height={200}
-          width={150}
-          alt="A turned off bulb"
-        />
-      </CardContent>
-      <CardFooter className="justify-center">
-        <div className="flex flex-col items-center gap-4 w-full">
-          <Button onClick={handleToggle}>
-            Turn {bulbState === BulbStates.ON ? "OFF" : "ON"}
-          </Button>
-          <div className="w-full flex justify-between">
-            <Slider
-              disabled={!bulbState}
-              max={100}
-              step={1}
-              value={brightness}
-              onValueChange={handleBrightness}
-            />
-            <Label>{brightness[0]}</Label>
+      {isSyncing ? (
+        <CardContentSkeleton />
+      ) : (
+        <CardContent className="flex items-center justify-center px-4">
+          <Image
+            src={`/images/light-bulb-${BulbStates[bulbState]}.jpg`}
+            height={200}
+            width={150}
+            alt="A turned off bulb"
+          />
+        </CardContent>
+      )}
+      {isSyncing ? (
+        <CardFooterSkeleton />
+      ) : (
+        <CardFooter className="justify-center">
+          <div className="flex flex-col items-center gap-4 w-full">
+            <Button onClick={handleToggle}>
+              Turn {bulbState === BulbStates.ON ? "OFF" : "ON"}
+            </Button>
+            <div className="w-full flex justify-between">
+              <Slider
+                className="px-4"
+                disabled={!bulbState}
+                max={100}
+                step={1}
+                value={brightness}
+                onValueChange={handleBrightness}
+              />
+              <Label>{brightness[0]}</Label>
+            </div>
           </div>
-        </div>
-      </CardFooter>
+        </CardFooter>
+      )}
     </Card>
   );
 };
