@@ -1,5 +1,5 @@
 import mqtt, { MqttClient } from "mqtt";
-import { sio } from "@/lib/serverside-socket";
+import { getSocketIOServer } from "@/lib/serverside-socket";
 
 let client: MqttClient | null = null;
 
@@ -40,6 +40,7 @@ export const getMqttClient = async () => {
         const newS = JSON.parse(newState.toString());
         const device_id = topic.split("/")[1];
         // forward the message to the Bulb component associated with the device_id
+        const sio = getSocketIOServer();
         sio.to(device_id).emit("syncState", newS);
       }
     });

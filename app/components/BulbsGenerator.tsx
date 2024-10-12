@@ -1,8 +1,9 @@
 "use client";
 import Bulb from "@/components/Bulb";
 import { useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 
-const BulbsGenerator = () => {
+const BulbsGeneratorS = () => {
   const searchParams = useSearchParams();
   const bulbsNumber = Number(searchParams.get("bulbs")) || 0;
 
@@ -16,6 +17,14 @@ const BulbsGenerator = () => {
         <Bulb key={index} name={item} />
       ))}
     </div>
+  );
+};
+
+const BulbsGenerator = () => {
+  return (
+    <Suspense>
+      <BulbsGeneratorS />
+    </Suspense>
   );
 };
 
