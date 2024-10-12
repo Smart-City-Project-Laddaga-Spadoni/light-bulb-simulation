@@ -53,7 +53,7 @@ sio.on("connection", (socket) => {
     if (client) {
       if (client.connected) {
         client.publish(
-          `device/${device_id}`,
+          `device/${device_id}/stateChange`,
           JSON.stringify(status)
         );
         console.log(`Published state change to device/${device_id}`);

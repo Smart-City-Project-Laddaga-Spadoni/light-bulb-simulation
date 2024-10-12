@@ -14,7 +14,7 @@ export const getMqttClient = async () => {
       return undefined;
     }
 
-    client.subscribe("device/+", (err) => {
+    client.subscribe("device/+/stateChange", (err) => {
       if (err) {
         console.error("Error subscribing to topic:", err);
       }
@@ -36,10 +36,12 @@ export const getMqttClient = async () => {
       console.log(
         `Received message from topic: ${topic}, message: ${newState.toString()}`,
       );
-      const newS = JSON.parse(newState.toString());
-      const device_id = topic.split("/")[1];
-      // forward the message to the Bulb component associated with the device_id
-      sio.to(device_id).emit("syncState", newS);
+      if (topic.endsWith("stateChange")) {
+        const newS = JSON.parse(newState.toString());
+        const device_id = topic.split("/")[1];
+        // forward the message to the Bulb component associated with the device_id
+        sio.to(device_id).emit("syncState", newS);
+      }
     });
   }
   return client;
