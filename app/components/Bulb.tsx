@@ -24,13 +24,21 @@ enum BulbStates {
 
 type MessageData = {
   is_on: boolean;
-  brightness: number;
+  is_dimmable: boolean;
+  brightness?: number;
 };
+
+function getRandomInt(min: number, max: number) {
+  const minCeiled = Math.ceil(min);
+  const maxFloored = Math.floor(max);
+  return Math.floor(Math.random() * (maxFloored - minCeiled + 1) + minCeiled);
+}
 
 const Bulb = ({ name }: { name: string }) => {
   const device_id = "bulb" + name.split(" ")[1];
   const [bulbState, setBulbState] = useState(BulbStates.OFF);
   const [brightness, setBrightness] = useState([50]);
+  const [isBulbDimmable, setIsBulbDimmable] = useState(true);
   const [socket, setSocket] = useState<Socket | null>(null);
   const [isSyncing, setIsSyncing] = useState(true);
 
@@ -38,21 +46,40 @@ const Bulb = ({ name }: { name: string }) => {
     const newState =
       bulbState === BulbStates.ON ? BulbStates.OFF : BulbStates.ON;
     setBulbState(newState);
-    handleStateChange({ is_on: !!newState, brightness: brightness[0] });
+    const tmp = {
+      is_on: newState === BulbStates.ON,
+      is_dimmable: isBulbDimmable,
+    } as MessageData;
+    if (isBulbDimmable) tmp.brightness = brightness[0];
+    handleStateChange(tmp);
   };
 
   const handleBrightness = (brightness: number[]) => {
     setBrightness(brightness);
-    handleStateChange({ is_on: !!bulbState, brightness: brightness[0] });
+    handleStateChange({
+      is_on: !!bulbState,
+      is_dimmable: isBulbDimmable,
+      brightness: brightness[0],
+    });
   };
 
-  const handleStateChange = ({ is_on, brightness }: MessageData) => {
+  const handleStateChange = (updatedStatus: MessageData) => {
     if (socket) {
       socket.emit("publishState", {
         device_id,
-        status: { is_on, brightness },
+        status: updatedStatus,
       });
     }
+  };
+
+  const getImageURI = () => {
+    const prefix = "/images";
+    return (
+      prefix +
+      (bulbState === BulbStates.ON
+        ? "/light-bulb-ON.jpg"
+        : "/light-bulb-OFF.jpg")
+    );
   };
 
   // at component mount, connect to the socket.io server and join the bulb room
@@ -60,12 +87,22 @@ const Bulb = ({ name }: { name: string }) => {
     const sock = io("http://localhost:32623");
     setSocket(sock);
 
-    sock.emit("join", device_id);
+    // generate a random initial state for the bulb
+    const initialStatus = {
+      is_on: !!getRandomInt(0, 1),
+      is_dimmable: !!getRandomInt(0, 1),
+    } as MessageData;
+    if (initialStatus.is_dimmable)
+      initialStatus.brightness = getRandomInt(1, 100);
+
+    sock.emit("join", device_id, initialStatus);
 
     // listen for state updates from the server (forwarded from the MQTT broker)
-    sock.on("syncState", (data) => {
-      setBulbState(data.is_on ? BulbStates.ON : BulbStates.OFF);
-      setBrightness([data.brightness]);
+    sock.on("syncState", (data: { status: MessageData }) => {
+      const { is_on, is_dimmable, brightness } = data.status;
+      setBulbState(is_on ? BulbStates.ON : BulbStates.OFF);
+      setIsBulbDimmable(is_dimmable);
+      if (is_dimmable && brightness) setBrightness([brightness]);
       setIsSyncing(false);
     });
 
@@ -75,7 +112,7 @@ const Bulb = ({ name }: { name: string }) => {
   }, [device_id]);
 
   return (
-    <Card className="w-64 h-full dark:bg-gray-800 rounded-lg border border-amber-50">
+    <Card className="w-64 h-108 dark:bg-gray-800 rounded-lg border border-amber-50">
       <CardHeader className="items-center">
         <CardTitle>{"💡" + name}</CardTitle>
         <CardDescription>
@@ -89,7 +126,7 @@ const Bulb = ({ name }: { name: string }) => {
       ) : (
         <CardContent className="flex items-center justify-center px-4">
           <Image
-            src={`/images/light-bulb-${BulbStates[bulbState]}.jpg`}
+            src={getImageURI()}
             height={200}
             width={150}
             alt="A turned off bulb"
@@ -104,17 +141,19 @@ const Bulb = ({ name }: { name: string }) => {
             <Button onClick={handleToggle}>
               Turn {bulbState === BulbStates.ON ? "OFF" : "ON"}
             </Button>
-            <div className="w-full flex justify-between">
-              <Slider
-                className="px-4"
-                disabled={!bulbState}
-                max={100}
-                step={1}
-                value={brightness}
-                onValueChange={handleBrightness}
-              />
-              <Label>{brightness[0]}</Label>
-            </div>
+            {isBulbDimmable && (
+              <div className="w-full flex justify-between">
+                <Slider
+                  className="px-4"
+                  disabled={!bulbState}
+                  max={100}
+                  step={1}
+                  value={brightness}
+                  onValueChange={handleBrightness}
+                />
+                <Label>{brightness[0]}</Label>
+              </div>
+            )}
           </div>
         </CardFooter>
       )}
