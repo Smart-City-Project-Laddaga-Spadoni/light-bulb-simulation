@@ -16,17 +16,12 @@ import { Label } from "@/components/ui/label";
 import { io, Socket } from "socket.io-client";
 import { CardContentSkeleton } from "@/components/CardContentSkeleton";
 import { CardFooterSkeleton } from "@/components/CardFooterSkeleton";
+import { MessageData } from "@/lib/types";
 
 enum BulbStates {
   OFF,
   ON,
 }
-
-type MessageData = {
-  is_on: boolean;
-  is_dimmable: boolean;
-  brightness?: number;
-};
 
 function getRandomInt(min: number, max: number) {
   const minCeiled = Math.ceil(min);

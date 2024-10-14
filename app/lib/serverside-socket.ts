@@ -1,17 +1,7 @@
 import { createServer } from "http";
 import { Server } from "socket.io";
 import { getMqttClient } from "@/lib/mqttClient";
-
-type MessageData = {
-  is_on: boolean;
-  is_dimmable: boolean;
-  brightness?: number;
-};
-
-type DeviceData = {
-  device_id: string;
-  status: MessageData;
-};
+import { DeviceData, MessageData } from "@/lib/types";
 
 let sio: Server | null = null;
 
