@@ -1,13 +1,32 @@
-import mqtt, { MqttClient } from "mqtt";
+"use strict"
+import mqtt, { IClientOptions, MqttClient } from "mqtt";
 import { getSocketIOServer } from "@/lib/serverside-socket";
+import path from "node:path";
+import fs from "fs";
 
 let client: MqttClient | null = null;
 
 export const getMqttClient = async () => {
   if (!client) {
     try {
-      console.log("Connecting to MQTT broker...");
-      client = await mqtt.connectAsync(process.env.MQTT_BROKER_URL!);
+      const KEY = fs.readFileSync(
+        path.join(__dirname, "..","..", "..", "public", "mqttCerts", "MyIoTDevice.private.key"),
+      );
+      const CERT = fs.readFileSync(
+        path.join(__dirname, "..","..", "..", "public", "mqttCerts", "MyIoTDevice.cert.pem"),
+      );
+
+      const connOpts = {
+        port: 8883,
+        host: process.env.MQTT_BROKER_URL,
+        key: KEY,
+        cert: CERT,
+        rejectUnauthorized: true,
+        protocol: "mqtts",
+      } as IClientOptions;
+
+      console.log("Connecting to AWS IoT Core...");
+      client = await mqtt.connectAsync(connOpts);
     } catch (error) {
       console.error("MQTT connection error:", error);
       client?.end();
